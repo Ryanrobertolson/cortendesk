@@ -98,6 +98,18 @@ if [ "$EMBEDDED" = 1 ]; then
 
     mkdir -p "$RD_DIR"
 
+    # A restore (Settings -> Backups) stages the server's files beside the
+    # live ones rather than overwriting what hbbs has open. Swap them in now,
+    # before hbbs starts and before the key check below could generate a
+    # fresh pair over a restored one.
+    for _f in id_ed25519 id_ed25519.pub db_v2.sqlite3; do
+        if [ -f "$RD_DIR/$_f.restore" ]; then
+            mv -f "$RD_DIR/$_f.restore" "$RD_DIR/$_f"
+            [ "$_f" = db_v2.sqlite3 ] && rm -f "$RD_DIR/db_v2.sqlite3-wal" "$RD_DIR/db_v2.sqlite3-shm"
+            echo "[cortendesk] adopted restored $_f"
+        fi
+    done
+
     # Generate the key pair before anything reads it. hbbs would do this on its
     # own first start, but the console caches its config before supervisord runs
     # anything, so the key has to exist by now or the first boot ships an empty
@@ -163,6 +175,18 @@ if [ "$EMBEDDED" = 1 ]; then
 else
     rm -f /etc/supervisor.d/rustdesk-server.conf
     echo "[cortendesk] embedded ID server and relay are off (CORTENDESK_EMBEDDED_SERVER)"
+fi
+
+# --- backups ------------------------------------------------------------------
+# Settings -> Backups writes its archives here, in the /data volume for the
+# same reason the installers are. With the embedded server the ID server's
+# data directory goes into every backup too (key pair, peer database).
+export CORTENDESK_BACKUPS_PATH="${CORTENDESK_BACKUPS_PATH:-/data/backups}"
+mkdir -p "$CORTENDESK_BACKUPS_PATH"
+chown www-data:www-data "$CORTENDESK_BACKUPS_PATH"
+chmod 700 "$CORTENDESK_BACKUPS_PATH"
+if [ "$EMBEDDED" = 1 ]; then
+    export CORTENDESK_RUSTDESK_DIR="${CORTENDESK_RUSTDESK_DIR:-$RD_DIR}"
 fi
 
 # --- uploaded client installers ----------------------------------------------

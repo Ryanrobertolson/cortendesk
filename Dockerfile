@@ -32,9 +32,11 @@ RUN mkdir -p storage/framework/cache/data storage/framework/sessions storage/fra
 # ---- stage 2: runtime (php-fpm + nginx under supervisord) --------------------
 FROM php:8.4-fpm-alpine
 
+# ftp (with TLS, hence openssl-dev at build time) is the off-site backup copy
+# in Settings -> Backups; the base image does not ship it.
 RUN apk add --no-cache nginx supervisor icu-libs gettext \
-    && apk add --no-cache --virtual .build icu-dev \
-    && docker-php-ext-install -j"$(nproc)" pdo_mysql bcmath opcache intl \
+    && apk add --no-cache --virtual .build icu-dev openssl-dev \
+    && docker-php-ext-install -j"$(nproc)" pdo_mysql bcmath opcache intl ftp \
     && apk del .build
 
 WORKDIR /app

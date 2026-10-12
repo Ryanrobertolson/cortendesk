@@ -12,6 +12,7 @@ use App\Models\NotificationDelivery;
 use App\Models\Setting;
 use App\Models\UserGroup;
 use App\Services\AppriseNotifications;
+use App\Services\DeviceEnrollment;
 use App\Services\MailSettings;
 use App\Services\OidcService;
 use App\Services\ServerLink;
@@ -48,6 +49,12 @@ class SettingsPage extends Component
     public int $logRetentionDays = 365;
 
     public bool $requireDeviceApproval = false;
+
+    /** Approve a pending device when its client signs in with a user account (issue #95). */
+    public bool $autoApproveSignedIn = false;
+
+    /** Device group every first-seen device lands in; 0 = none (issue #97). */
+    public int $defaultDeviceGroupId = 0;
 
     public bool $serverIpMatch = false;
 
@@ -202,6 +209,8 @@ class SettingsPage extends Component
         $this->downloadsOnLogin = Setting::get('downloads_on_login', config('cortendesk.downloads_on_login') ? '1' : '0') === '1';
         $this->logRetentionDays = (int) (Setting::get('log_retention_days', (string) config('cortendesk.log_retention_days')) ?: 0);
         $this->requireDeviceApproval = (bool) Setting::get('require_device_approval', '0');
+        $this->autoApproveSignedIn = DeviceEnrollment::autoApproveSignedIn();
+        $this->defaultDeviceGroupId = DeviceEnrollment::defaultGroup()?->id ?? 0;
         $this->serverAccessMode = ServerLink::mode();
         $this->serverIpMatch = ServerLink::ipMatch();
         $this->twoFactorRequired = Setting::get('two_factor_required', '0') === '1';
@@ -289,7 +298,7 @@ class SettingsPage extends Component
             str_starts_with($root, 'apprise') => 'notifications',
             $root === 'logRetentionDays' => 'maintenance',
             in_array($root, ['twoFactorRequired', 'twoFactorRequiredAdmins', 'emailLoginVerification', 'emailTrustedDeviceDays'], true) => 'security',
-            in_array($root, ['idServer', 'relayServer', 'publicKey', 'onlineWindow', 'rdgenUrl', 'downloadsOnLogin', 'relayServers', 'requireDeviceApproval', 'serverAccessMode', 'serverIpMatch'], true) => 'server',
+            in_array($root, ['idServer', 'relayServer', 'publicKey', 'onlineWindow', 'rdgenUrl', 'downloadsOnLogin', 'relayServers', 'requireDeviceApproval', 'autoApproveSignedIn', 'defaultDeviceGroupId', 'serverAccessMode', 'serverIpMatch'], true) => 'server',
             default => null,
         };
     }
@@ -306,6 +315,7 @@ class SettingsPage extends Component
                 'onlineWindow' => 'required|integer|min:20|max:600',
                 'rdgenUrl' => 'nullable|url|max:255',
                 'logRetentionDays' => 'required|integer|min:0|max:3650',
+                'defaultDeviceGroupId' => 'required|integer|min:0',
                 'serverAccessMode' => 'required|in:'.ServerLink::MODE_OPEN.','.ServerLink::MODE_APPROVED,
                 'relayServers' => 'array',
                 'relayServers.*.address' => 'nullable|string|max:255',
@@ -338,6 +348,13 @@ class SettingsPage extends Component
             $this->tab = self::tabForField((string) array_key_first($e->errors())) ?? $this->tab;
 
             throw $e;
+        }
+
+        if ($this->defaultDeviceGroupId > 0 && ! DeviceGroup::query()->whereKey($this->defaultDeviceGroupId)->exists()) {
+            $this->tab = 'server';
+            $this->addError('defaultDeviceGroupId', 'That device group no longer exists.');
+
+            return;
         }
 
         // Turning SSO on without the three fields needed to reach a provider
@@ -383,6 +400,8 @@ class SettingsPage extends Component
         Setting::put('downloads_on_login', $this->downloadsOnLogin ? '1' : '0');
         Setting::put('log_retention_days', (string) $this->logRetentionDays);
         Setting::put('require_device_approval', $this->requireDeviceApproval ? '1' : '0');
+        Setting::put(DeviceEnrollment::SETTING_AUTO_APPROVE, $this->autoApproveSignedIn ? '1' : '0');
+        Setting::put(DeviceEnrollment::SETTING_DEFAULT_GROUP, (string) $this->defaultDeviceGroupId);
         if ($this->serverAccessMode !== ServerLink::mode()) {
             Setting::put('server_access_mode', $this->serverAccessMode);
             ConsoleAudit::record('settings.server-access', 'Server access set to '.$this->serverAccessMode, 'settings', null);
@@ -631,6 +650,27 @@ class SettingsPage extends Component
             ->filter();
     }
 
+    /**
+     * Groups offered as the default for new devices: every group for an
+     * administrator, otherwise only the ones the actor can see, plus the one
+     * currently set so a save by a delegated manager cannot silently clear it.
+     */
+    private function selectableDefaultGroups(): Collection
+    {
+        $actor = auth()->user();
+        $query = DeviceGroup::query()->orderBy('name');
+
+        if (! $actor?->is_admin) {
+            $visible = $actor?->accessibleDeviceGroupIds() ?? [];
+            if ($this->defaultDeviceGroupId > 0) {
+                $visible[] = $this->defaultDeviceGroupId;
+            }
+            $query->whereIn('id', $visible);
+        }
+
+        return $query->get(['id', 'name']);
+    }
+
     public function render()
     {
         $isAdmin = (bool) auth()->user()?->is_admin;
@@ -644,6 +684,7 @@ class SettingsPage extends Component
             'usersWithoutEmail' => LoginEmailVerification::usersWithoutEmail(),
             'appriseEventLabels' => AppriseNotifications::EVENTS,
             'appriseDeviceGroups' => DeviceGroup::query()->orderBy('name')->get(['id', 'name']),
+            'deviceGroups' => $this->selectableDefaultGroups(),
             'appriseDevices' => Device::query()->approved()->orderByRaw("COALESCE(NULLIF(alias, ''), NULLIF(hostname, ''), rustdesk_id)")->get(['id', 'rustdesk_id', 'alias', 'hostname']),
             'notificationDeliveries' => $deliveries = NotificationDelivery::query()->latest()->limit(10)->get(),
             'notificationDeliveryDevices' => $this->deliveryDevices($deliveries),

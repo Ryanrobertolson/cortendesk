@@ -45,6 +45,11 @@ export class WsStream implements Transport {
   }
 
   static open(url: string, WsCtor?: WebSocketCtor): Promise<WsStream> {
+    // The URL is the console's own ws/relay endpoint, handed to the worker as
+    // session config. Still, this is the one place a socket is opened, so
+    // refuse anything that is not a WebSocket URL before it reaches the
+    // constructor.
+    if (!/^wss?:\/\//i.test(url)) return Promise.reject(new Error(`refusing non-WebSocket URL: ${url}`));
     const Ctor = WsCtor ?? (globalThis as { WebSocket?: WebSocketCtor }).WebSocket;
     if (!Ctor) return Promise.reject(new Error('no WebSocket constructor available (pass one to WsStream.open)'));
     return new Promise((resolve, reject) => {

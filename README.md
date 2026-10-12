@@ -16,7 +16,7 @@ Built on Laravel + Livewire with precompiled assets: **there is no frontend buil
 
 **Console**
 - **Devices** — live fleet with presence, platform icons, aliases, device groups ("folders"), pre-registration, and a recycle bin. One-click connect via `rustdesk://` deep links or the built-in web client. Pick your own table columns (CPU, memory, IP, UUID and more — saved per user), export the current view to CSV, and multi-select rows to bulk-delete or add devices to an address book. Each device has a detail page with its connections, file transfers, notifications and address books.
-- **Server access control** — with the embedded ID server (or CortenDesk Server 1.1.0+), limit the server to devices you approved, and mark devices incoming only so they can be controlled but cannot start sessions. The ID server enforces both. It also reports each device's LAN address seen during connection setup, shown as an optional LAN IP column. See [CortenDesk Server](https://github.com/marcpope/cortendesk-server#device-policy-from-a-cortendesk-console).
+- **Server access control** — with the embedded ID server (or CortenDesk Server 1.1.0+), limit the server to devices you approved, and mark devices incoming only so they can be controlled but cannot start sessions. New devices can land in a default group, and a pending device can be approved automatically when its user signs in. The ID server enforces both. It also reports each device's LAN address seen during connection setup, shown as an optional LAN IP column. See [CortenDesk Server](https://github.com/marcpope/cortendesk-server#device-policy-from-a-cortendesk-console).
 - **Users & access scoping** — a detail page per user shows their devices, address books, sign-ins, console actions and connections. Admins see everything; regular users see only their own devices plus device groups granted to them or their user groups. The RustDesk client API is scoped with the same rules.
 - **Address books** — full support for the modern multi-address-book API *and* the legacy API: shared books, share rules (everyone / user / group), tags with colors.
 - **Audit logs** — connections (with the note RustDesk clients can leave at the end of a session), file transfers, console logins, and security alarms (brute-force/blocked-access events); filterable, exportable to CSV, with configurable retention and automatic nightly pruning.
@@ -26,6 +26,7 @@ Built on Laravel + Livewire with precompiled assets: **there is no frontend buil
 - **Delegated administration** — roles with a permission matrix over each console area, so you can grant someone the users screen without handing them the whole console.
 - **Automation API** — scoped bearer tokens and a REST API for users, devices, groups, address books and audit logs, plus support for the RustDesk client's `--assign` flag for unattended deployment.
 - **Email** — SMTP settings with a test send, user invitations by email, self-service password reset, and an optional emailed code when signing in from a new browser.
+- **Backups** — one archive with the whole database, every setting, the app key and the bundled server's key pair and peer database. Runs daily, keeps 7 daily, 8 weekly and 6 monthly, copies each one to FTP/FTPS or S3-compatible storage, and restores from the list or an upload, re-keying encrypted values for a fresh install.
 - **Dashboard** — live stat tiles, active sessions, 14-day connection charts, platform and version breakdowns.
 - **Importer** — one artisan command migrates everything (users with passwords intact, devices, address books, audit history) from a `lejianwen/rustdesk-api` database.
 - **Mobile-first** — every screen works on a phone; wide tables degrade to card lists. Dark and light themes.
@@ -59,7 +60,7 @@ docker run -d --name cortendesk \
   -e APP_URL=https://rd.example.com \
   -p 8080:8080 -p 21115-21117:21115-21117 -p 21116:21116/udp \
   -v cortendesk-data:/data \
-  ghcr.io/marcpope/cortendesk:1.12.0
+  ghcr.io/marcpope/cortendesk:1.13.0
 ```
 
 `APP_URL` is the only setting that matters: it is the address your clients and
@@ -106,6 +107,8 @@ and must allow the same size.
 
 | Variable | Default | What it does |
 |---|---|---|
+| `CORTENDESK_BACKUPS_PATH` | `/data/backups` | Where Settings → Backups writes its archives. Keep it in the volume. |
+| `CORTENDESK_RUSTDESK_DIR` | `/data/rustdesk` when embedded | The ID server's data directory, so backups carry the key pair and peer database. Empty with external servers. |
 | `CORTENDESK_HTTP_PORT` | `8080` | Port nginx listens on inside the container. The healthcheck and the embedded hbbs follow it. Publish it with `-p <host>:<port>`. |
 | `CORTENDESK_UPDATE_CHECK` | `true` | `false` stops the request to GitHub every 6 hours and hides the "update available" badge and status line. |
 | `CORTENDESK_LOG_LEVEL` | unset | One level for everything: `debug`, `info`, `notice`, `warning`, `error` or `critical`. Sets Laravel's `LOG_LEVEL` and hbbs/hbbr's `RUST_LOG`; `warning` and above also turn off php-fpm's line per request. `LOG_LEVEL` or `RUST_LOG` set on their own still win. |

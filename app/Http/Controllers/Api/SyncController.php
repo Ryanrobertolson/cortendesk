@@ -8,6 +8,7 @@ use App\Models\AuditConnection;
 use App\Models\Device;
 use App\Models\Strategy;
 use App\Services\AppriseNotifications;
+use App\Services\DeviceEnrollment;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
@@ -156,7 +157,12 @@ class SyncController extends Controller
             // update, so later heartbeats cannot rewrite history (issue #46).
             $attributes['registered_ip'] = $request->ip();
 
-            $device = Device::create(['rustdesk_id' => $id] + $attributes);
+            $device = Device::create(['rustdesk_id' => $id] + DeviceEnrollment::defaultsForNew($attributes));
+
+            // The client may already be signed in to this console (the user
+            // signed in before the first heartbeat landed): that counts as
+            // approval when the setting says so (issue #95).
+            DeviceEnrollment::approveIfSignedIn($device);
 
             if ($device->isPending()) {
                 app(AppriseNotifications::class)->sendAfterResponse(

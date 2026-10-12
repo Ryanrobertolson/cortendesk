@@ -16,6 +16,11 @@ Artisan::command('inspire', function () {
 // and keep lock expiry short so a lock stranded any other way clears itself.
 $releaseOnSignals = function_exists('pcntl_signal') && function_exists('pcntl_async_signals');
 
+// Backups (Settings -> Backups). Runs daily; the command decides whether one
+// is due from the configured frequency and no-ops when backups are off. Before
+// prune-logs, so a backup holds a day's logs the pruner is about to drop.
+Schedule::command('cortendesk:backup --scheduled')->dailyAt('03:30')->withoutOverlapping(30, $releaseOnSignals);
+
 // Retention: prune old audit/log rows nightly (no-op when retention is 0).
 Schedule::command('cortendesk:prune-logs')->dailyAt('04:10');
 

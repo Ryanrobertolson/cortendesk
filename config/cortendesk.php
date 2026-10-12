@@ -137,6 +137,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Backups
+    |--------------------------------------------------------------------------
+    | Where Settings -> Backups writes its archives (one .tar per backup, the
+    | database, settings and server files inside). The Docker image points it
+    | into the /data volume. rustdesk_dir is the embedded ID server's data
+    | directory (key pair and peer database); empty when the server runs
+    | elsewhere, in which case backups carry the database only.
+    */
+    'backups_path' => env('CORTENDESK_BACKUPS_PATH', storage_path('app/private/backups')),
+    'rustdesk_dir' => rtrim((string) env('CORTENDESK_RUSTDESK_DIR', ''), '/'),
+
+    /*
+    |--------------------------------------------------------------------------
     | OIDC break-glass switch
     |--------------------------------------------------------------------------
     | Set CORTENDESK_OIDC_DISABLED=true to turn single sign-on off from the

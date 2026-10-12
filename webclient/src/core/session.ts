@@ -102,7 +102,15 @@ function baselineDecoding(): SupportedDecoding {
   });
 }
 
+// Replies that mean "a person on the remote side has to click Accept", not
+// "your credentials were refused". "No Password Access" is what a peer in
+// click-to-approve mode sends to clients 1.2.0+ right after it has opened its
+// accept prompt (issue #98); treating it as a failure tore the socket down and
+// took the prompt with it.
+const NO_PASSWORD_ACCESS = 'No Password Access';
+
 function isManualAccept(error: string): boolean {
+  if (error === NO_PASSWORD_ACCESS) return true;
   const e = error.toLowerCase();
   return e.includes('wait') && e.includes('accept');
 }
@@ -297,6 +305,11 @@ export class Session {
           if (preferred) this.decoding = preferred;
         }
         this.loginSent = true;
+        // An empty password is a request to be let in by hand: the remote
+        // opens its accept prompt and, in password-or-click mode, says
+        // nothing until the person answers. Enter needAccept now so the UI
+        // says so and the connect watchdog stands down (issue #98).
+        const manualAccept = passwordHash.length === 0;
         this.sealSend(
           buildLoginRequest({
             peerId: this.config.peerId,
@@ -319,6 +332,7 @@ export class Session {
             initialOptions: this.config.initialOptions,
           }),
         );
+        if (manualAccept) this.setState('needAccept', 'Waiting for the remote user to accept');
         return;
       }
       case 'login_response': {

@@ -50,6 +50,7 @@
             'email'       => ['ri-mail-send-line', 'Email'],
             'notifications' => ['ri-notification-3-line', 'Notifications'],
             'maintenance' => ['ri-database-2-line', 'Maintenance'],
+            'backups' => ['ri-archive-line', 'Backups'],
         ];
     @endphp
     {{-- The label stays visible at every width. Six tabs do not fit across a
@@ -124,6 +125,24 @@
                                         <label class="form-check-label" for="requireDeviceApproval">Require device approval</label>
                                     </div>
                                     <div class="form-text">When on, a newly seen device is held as <strong>Pending</strong> and hidden from the console and API until an operator approves it on the Devices &rarr; Pending tab. Deployed devices (via an API token) are pre-approved.</div>
+                                    <div class="form-check form-switch mt-2">
+                                        <input class="form-check-input" type="checkbox" role="switch" id="autoApproveSignedIn"
+                                               wire:model="autoApproveSignedIn">
+                                        <label class="form-check-label" for="autoApproveSignedIn">Approve when the device's user signs in</label>
+                                    </div>
+                                    <div class="form-text">With the gate on, a pending device whose RustDesk client is signed in to this console with a user account is approved on arrival, and that user becomes its owner. Works in either order: device first or sign-in first.</div>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="defaultDeviceGroupId">Default group for new devices</label>
+                                    <select id="defaultDeviceGroupId" class="form-select @error('defaultDeviceGroupId') is-invalid @enderror"
+                                            wire:model="defaultDeviceGroupId" style="max-width: 320px;">
+                                        <option value="0">None</option>
+                                        @foreach ($deviceGroups as $group)
+                                            <option value="{{ $group->id }}">{{ $group->name }}</option>
+                                        @endforeach
+                                    </select>
+                                    @error('defaultDeviceGroupId') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                    <div class="form-text">Every device that first appears, pending or not, is placed in this group. Give a user group access to it and your support staff can see new devices without an administrator filing each one. Existing devices are not moved.</div>
                                 </div>
                                 <div class="mb-3">
                                     <label class="form-label" for="serverAccessMode">Server access</label>
@@ -800,6 +819,11 @@
                     </div>
                 </div>
             </div>
+        </div>
+
+        {{-- =========================== BACKUPS =========================== --}}
+        <div class="tab-pane {{ $tab === 'backups' ? 'show active' : '' }}">
+            @livewire(App\Livewire\BackupManager::class)
         </div>
 
     </div>

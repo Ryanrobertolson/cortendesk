@@ -12,6 +12,7 @@ use App\Models\DeviceGroup;
 use App\Models\Strategy;
 use App\Models\Tag;
 use App\Models\User;
+use App\Services\DeviceEnrollment;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Crypt;
@@ -162,6 +163,8 @@ class DeviceCliController extends Controller
         }
         if ($groupChange !== null) {
             $device->device_group_id = $groupChange;
+        } elseif ($isNew && ($default = DeviceEnrollment::defaultGroup()) !== null) {
+            $device->device_group_id = $default->id;
         }
         if ($request->filled('note')) {
             $device->note = (string) $request->input('note');

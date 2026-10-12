@@ -5,9 +5,11 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\Concerns\SerializesUsers;
 use App\Http\Controllers\Controller;
 use App\Models\ClientToken;
+use App\Models\Device;
 use App\Models\LoginLog;
 use App\Models\User;
 use App\Services\AppriseNotifications;
+use App\Services\DeviceEnrollment;
 use App\Services\OidcService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -93,6 +95,13 @@ class ClientAuthController extends Controller
             'name' => $deviceInfo['name'] ?? null,
             'type' => $deviceInfo['type'] ?? null,
         ]);
+
+        // Signing in from a device the approval gate is holding approves it
+        // when the setting says so, and makes this user its owner (issue #95).
+        $pending = Device::query()->pending()->where('rustdesk_id', (string) $request->input('id', ''))->first();
+        if ($pending !== null) {
+            DeviceEnrollment::approveIfSignedIn($pending, $user);
+        }
 
         // AuthBody: access_token, type and user are required by the client.
         return response()->json([

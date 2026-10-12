@@ -4,6 +4,7 @@ use App\Http\Controllers\AccountThemeController;
 use App\Http\Controllers\Api\ClientOidcController;
 use App\Http\Controllers\Api\WebClientController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\BackupController;
 use App\Http\Controllers\ClientDownloadController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DiagnosticsController;
@@ -133,6 +134,12 @@ Route::middleware('auth')->group(function () {
 
     Route::view('/settings', 'settings.index')->name('settings')
         ->middleware('console-can:setting,r');
+
+    // A backup archive carries the APP_KEY and every secret the database
+    // holds, so fetching one is a Manage action, not a View one.
+    Route::get('/settings/backups/{name}', [BackupController::class, 'download'])->name('settings.backups.download')
+        ->where('name', '[A-Za-z0-9._-]+')
+        ->middleware('console-can:setting,rw');
 
     // Uploading the installers the public /downloads page hands out. Gated by
     // the `setting` area rather than an area of its own — see the
