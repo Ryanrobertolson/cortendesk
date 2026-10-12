@@ -26,7 +26,7 @@ Built on Laravel + Livewire with precompiled assets: **there is no frontend buil
 - **Delegated administration** — roles with a permission matrix over each console area, so you can grant someone the users screen without handing them the whole console.
 - **Automation API** — scoped bearer tokens and a REST API for users, devices, groups, address books and audit logs, plus support for the RustDesk client's `--assign` flag for unattended deployment.
 - **Email** — SMTP settings with a test send, user invitations by email, self-service password reset, and an optional emailed code when signing in from a new browser.
-- **Backups** — one archive with the whole database, every setting, the app key and the bundled server's key pair and peer database. Runs daily, keeps 7 daily, 8 weekly and 6 monthly, copies each one to FTP/FTPS or S3-compatible storage, and restores from the list or an upload, re-keying encrypted values for a fresh install.
+- **Backups** — one archive with the whole database, every setting, the app key and the bundled server's key pair and peer database. Runs daily, keeps 7 daily, 8 weekly and 6 monthly, mirrors them to FTP/FTPS or S3-compatible storage, and restores from the list or an upload, re-keying encrypted values for a fresh install.
 - **Dashboard** — live stat tiles, active sessions, 14-day connection charts, platform and version breakdowns.
 - **Importer** — one artisan command migrates everything (users with passwords intact, devices, address books, audit history) from a `lejianwen/rustdesk-api` database.
 - **Mobile-first** — every screen works on a phone; wide tables degrade to card lists. Dark and light themes.
@@ -60,7 +60,7 @@ docker run -d --name cortendesk \
   -e APP_URL=https://rd.example.com \
   -p 8080:8080 -p 21115-21117:21115-21117 -p 21116:21116/udp \
   -v cortendesk-data:/data \
-  ghcr.io/marcpope/cortendesk:1.13.0
+  ghcr.io/marcpope/cortendesk:1.13.1
 ```
 
 `APP_URL` is the only setting that matters: it is the address your clients and

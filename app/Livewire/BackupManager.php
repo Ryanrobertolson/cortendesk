@@ -224,9 +224,27 @@ class BackupManager extends Component
         try {
             app(BackupService::class)->delete($name);
             ConsoleAudit::record('backup.delete', 'Deleted backup '.$name, 'backup', $name);
-            $this->notice = ['tone' => 'info', 'text' => "Deleted {$name}."];
         } catch (Throwable $e) {
             $this->notice = ['tone' => 'danger', 'text' => $e->getMessage()];
+
+            return;
+        }
+
+        // The off-site copy mirrors this list; take the file down there too.
+        // If that fails the next run's sync removes it.
+        $target = BackupService::target();
+        if ($target === null) {
+            $this->notice = ['tone' => 'info', 'text' => "Deleted {$name}."];
+
+            return;
+        }
+        try {
+            if (in_array($name, $target->list(), true)) {
+                $target->delete($name);
+            }
+            $this->notice = ['tone' => 'info', 'text' => "Deleted {$name} here and at ".$target->label().'.'];
+        } catch (Throwable $e) {
+            $this->notice = ['tone' => 'warning', 'text' => "Deleted {$name}. The copy at ".$target->label().' could not be removed ('.$e->getMessage().'); the next run removes it.'];
         }
     }
 

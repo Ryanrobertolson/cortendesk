@@ -91,6 +91,9 @@ final class FtpTarget implements RemoteTarget
         if (! function_exists('ftp_connect')) {
             throw new RuntimeException('PHP\'s ftp extension is not installed on this server.');
         }
+        if ($this->tls && ! function_exists('ftp_ssl_connect')) {
+            throw new RuntimeException('PHP\'s ftp extension was built without TLS support (--with-ftp-ssl), so FTPS is not available on this server.');
+        }
         if ($this->host === '') {
             throw new RuntimeException('The FTP host is empty.');
         }

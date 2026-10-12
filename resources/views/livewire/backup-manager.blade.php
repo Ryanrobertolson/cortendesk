@@ -165,7 +165,7 @@
                                 </div>
                             @endforeach
                         </div>
-                        <div class="form-text mt-2">All three apply at once: the newest {{ $keepDaily }} backups, the first backup of each of the last {{ $keepWeekly }} weeks, and the first of each of the last {{ $keepMonthly }} months. Everything else is deleted after each scheduled run, here and at the off-site copy. 0 turns a tier off.</div>
+                        <div class="form-text mt-2">All three apply at once: the newest {{ $keepDaily }} backups, the first backup of each of the last {{ $keepWeekly }} weeks, and the first of each of the last {{ $keepMonthly }} months. Everything else is deleted after each run. 0 turns a tier off.</div>
                     </div>
                 </div>
 
@@ -182,7 +182,7 @@
                                 @endforeach
                             </select>
                             @error('target') <div class="invalid-feedback">{{ $message }}</div> @enderror
-                            <div class="form-text">A copy of every backup, manual or scheduled, goes there after it is written. The local copy stays either way.</div>
+                            <div class="form-text">Mirrors the list on this server: after each run the new backup goes up and anything pruned or deleted here is removed there. The local copy stays either way.</div>
                         </div>
 
                         @if ($target === 'ftp')

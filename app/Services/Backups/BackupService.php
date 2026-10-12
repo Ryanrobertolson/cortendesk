@@ -255,9 +255,11 @@ class BackupService
                 continue;
             }
 
+            // A sidecar another user wrote (artisan run as root) is skipped,
+            // not fatal; the row then shows the file's own time.
             $manifest = null;
-            if (is_file($path.'.json')) {
-                $decoded = json_decode((string) file_get_contents($path.'.json'), true);
+            if (is_readable($path.'.json')) {
+                $decoded = json_decode((string) @file_get_contents($path.'.json'), true);
                 $manifest = is_array($decoded) ? $decoded : null;
             }
 
@@ -328,27 +330,45 @@ class BackupService
     }
 
     /**
-     * Same tiers at the off-site target, applied only to files that are ours.
+     * Make the off-site target mirror the local list: upload what it lacks,
+     * delete what the server no longer has. Only files named like ours are
+     * touched, so the directory or prefix can be shared.
      *
-     * @param  array{daily: int, weekly: int, monthly: int}  $keep
-     * @return list<string> names deleted
+     * @return array{uploaded: list<string>, deleted: list<string>}
      */
-    public function applyRemoteRetention(RemoteTarget $target, array $keep): array
+    public function syncRemote(RemoteTarget $target): array
     {
-        $entries = [];
+        $local = [];
+        foreach ($this->list() as $row) {
+            $local[$row['name']] = $row['path'];
+        }
+
+        $remote = [];
         foreach ($target->list() as $name) {
-            if (preg_match(self::NAME_PATTERN, $name) && ($at = self::createdAtFromName($name)) !== null) {
-                $entries[] = ['name' => $name, 'created_at' => $at];
+            if (preg_match(self::NAME_PATTERN, $name)) {
+                $remote[$name] = true;
             }
         }
 
-        $deleted = [];
-        foreach (self::prunable($entries, $keep) as $name) {
-            $target->delete($name);
-            $deleted[] = $name;
+        $result = ['uploaded' => [], 'deleted' => []];
+
+        // Oldest first, so a run cut short leaves the remote a prefix of the
+        // local list rather than holes in it.
+        foreach (array_reverse($local, true) as $name => $path) {
+            if (! isset($remote[$name])) {
+                $target->put($path, $name);
+                $result['uploaded'][] = $name;
+            }
         }
 
-        return $deleted;
+        foreach (array_keys($remote) as $name) {
+            if (! isset($local[$name])) {
+                $target->delete($name);
+                $result['deleted'][] = $name;
+            }
+        }
+
+        return $result;
     }
 
     /**
