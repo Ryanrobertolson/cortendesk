@@ -5,7 +5,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Thanks for the report. The fields below are what is needed to reproduce most problems; the more of them you fill in, the faster it gets fixed. Check the [Troubleshooting](https://github.com/marcpope/cortendesk/wiki/Troubleshooting) page first, it covers the usual suspects.
+        Thanks for the report. The fields below are what is needed to reproduce most problems; the more of them you fill in, the faster it gets fixed. Check the [Troubleshooting](https://github.com/marcpope/cortendesk/wiki/Troubleshooting) page first, it covers the usual suspects. If an issue was closed and you have more data, comment on it: that reopens it.
 
   - type: textarea
     id: what
