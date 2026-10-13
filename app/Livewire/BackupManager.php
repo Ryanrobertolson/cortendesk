@@ -83,6 +83,12 @@ class BackupManager extends Component
     /** @var array{tone: string, text: string}|null */
     public ?array $notice = null;
 
+    /** @var array{tone: string, text: string}|null shown next to the Test connection button */
+    public ?array $testResult = null;
+
+    /** Keys the result element, so each test renders a fresh one that scrolls itself into view. */
+    public int $testRuns = 0;
+
     public bool $saved = false;
 
     public function mount(): void
@@ -117,6 +123,7 @@ class BackupManager extends Component
         $this->authorizeConsole('setting', 'rw');
         $this->saved = false;
         $this->notice = null;
+        $this->testResult = null;
 
         $this->validate([
             'keepDaily' => 'required|integer|min:0|max:'.BackupService::MAX_KEEP,
@@ -181,25 +188,31 @@ class BackupManager extends Component
         $this->saved = true;
     }
 
-    /** Prove the saved off-site target works. Saves first so what is tested is what the scheduler will use. */
+    /**
+     * Prove the saved off-site target works. Saves first so what is tested is
+     * what the scheduler will use. The result sits next to the button, which
+     * is far below the tab's notice area.
+     */
     public function testTarget(): void
     {
         $this->save();
         if ($this->getErrorBag()->isNotEmpty()) {
             return;
         }
+        $this->saved = false;
+        $this->testRuns++;
 
         $target = BackupService::target();
         if ($target === null) {
-            $this->notice = ['tone' => 'info', 'text' => 'No off-site copy is configured.'];
+            $this->testResult = ['tone' => 'info', 'text' => 'Saved. No off-site copy is configured.'];
 
             return;
         }
 
         try {
-            $this->notice = ['tone' => 'success', 'text' => $target->test()];
+            $this->testResult = ['tone' => 'success', 'text' => 'Saved. '.$target->test()];
         } catch (Throwable $e) {
-            $this->notice = ['tone' => 'danger', 'text' => $e->getMessage()];
+            $this->testResult = ['tone' => 'danger', 'text' => 'Saved, but the test failed: '.$e->getMessage()];
         }
     }
 
@@ -239,7 +252,7 @@ class BackupManager extends Component
             return;
         }
         try {
-            if (in_array($name, $target->list(), true)) {
+            if (array_key_exists($name, $target->list())) {
                 $target->delete($name);
             }
             $this->notice = ['tone' => 'info', 'text' => "Deleted {$name} here and at ".$target->label().'.'];

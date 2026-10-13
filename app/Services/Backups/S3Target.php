@@ -77,7 +77,7 @@ final class S3Target implements RemoteTarget
                 if ($rest === '' || str_contains($rest, '/')) {
                     continue;
                 }
-                $names[] = $rest;
+                $names[$rest] = isset($object->Size) ? (int) $object->Size : null;
             }
 
             $token = ((string) ($xml->IsTruncated ?? '')) === 'true'

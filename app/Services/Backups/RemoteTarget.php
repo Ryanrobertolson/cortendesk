@@ -13,9 +13,10 @@ interface RemoteTarget
     public function put(string $localPath, string $name): void;
 
     /**
-     * Names of the files present at the target, directory prefix stripped.
+     * The files present at the target, directory prefix stripped, with their
+     * size in bytes, or null where the target does not say.
      *
-     * @return list<string>
+     * @return array<string, int|null>
      */
     public function list(): array;
 

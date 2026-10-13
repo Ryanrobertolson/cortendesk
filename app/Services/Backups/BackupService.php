@@ -12,6 +12,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use PDO;
 use PharData;
@@ -338,15 +339,47 @@ class BackupService
      */
     public function syncRemote(RemoteTarget $target): array
     {
+        // Two runs copying the same file at once (Back up now during the
+        // scheduled run) can leave a copy that is full size but wrong, which
+        // no size check catches. The second one leaves the target alone.
+        // flock rather than a cache lock: the kernel lets go when a run dies,
+        // so a killed run cannot hold it.
+        $handle = false;
+        foreach ([storage_path('framework/backup-copy.lock'), sys_get_temp_dir().'/cortendesk-backup-copy.lock'] as $path) {
+            if ($handle = @fopen($path, 'c') ?: @fopen($path, 'r')) {
+                break;
+            }
+        }
+        if ($handle === false) {
+            Log::warning('Backup off-site copy runs without its lock: no lock file could be opened.');
+        }
+        if ($handle !== false && ! flock($handle, LOCK_EX | LOCK_NB)) {
+            fclose($handle);
+            throw new RuntimeException('Another run is copying to the off-site target right now, so this one left it alone. Its backup goes up with the next run.');
+        }
+
+        try {
+            return $this->mirror($target);
+        } finally {
+            if ($handle !== false) {
+                flock($handle, LOCK_UN);
+                fclose($handle);
+            }
+        }
+    }
+
+    /** @return array{uploaded: list<string>, deleted: list<string>} */
+    private function mirror(RemoteTarget $target): array
+    {
         $local = [];
         foreach ($this->list() as $row) {
             $local[$row['name']] = $row['path'];
         }
 
         $remote = [];
-        foreach ($target->list() as $name) {
+        foreach ($target->list() as $name => $size) {
             if (preg_match(self::NAME_PATTERN, $name)) {
-                $remote[$name] = true;
+                $remote[$name] = $size;
             }
         }
 
@@ -355,7 +388,9 @@ class BackupService
         // Oldest first, so a run cut short leaves the remote a prefix of the
         // local list rather than holes in it.
         foreach (array_reverse($local, true) as $name => $path) {
-            if (! isset($remote[$name])) {
+            // Missing, or there at another size: a copy cut short by a run
+            // that died mid-upload would otherwise count as copied for good.
+            if (! array_key_exists($name, $remote) || ($remote[$name] !== null && $remote[$name] !== filesize($path))) {
                 $target->put($path, $name);
                 $result['uploaded'][] = $name;
             }

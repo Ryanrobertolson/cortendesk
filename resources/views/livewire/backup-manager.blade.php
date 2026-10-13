@@ -216,7 +216,7 @@
                                         <input class="form-check-input" type="checkbox" role="switch" id="ftpTls" wire:model="ftpTls" @disabled(! $canManage)>
                                         <label class="form-check-label" for="ftpTls">Use TLS (explicit FTPS)</label>
                                     </div>
-                                    <div class="form-text">Plain FTP sends the password in clear. SFTP is not supported.</div>
+                                    <div class="form-text">Plain FTP sends the password in clear. TLS means explicit FTPS (AUTH TLS, usually port 21); the server's certificate is not verified. Implicit FTPS (port 990) and SFTP are not supported.</div>
                                 </div>
                             </div>
                         @elseif ($target === 's3')
@@ -263,10 +263,15 @@
                             <button type="submit" class="btn btn-primary" @disabled(! $canManage)><i class="ri-save-line me-1"></i>Save</button>
                             @if ($target !== 'none')
                                 <button type="button" class="btn btn-light" wire:click="testTarget" wire:loading.attr="disabled" wire:target="testTarget" @disabled(! $canManage)>
-                                    <i class="ri-plug-line me-1"></i>Test connection
+                                    <span wire:loading.remove wire:target="testTarget"><i class="ri-plug-line me-1"></i>Test connection</span>
+                                    <span wire:loading wire:target="testTarget"><i class="ri-loader-4-line me-1"></i>Testing…</span>
                                 </button>
                             @endif
                         </div>
+                        @if ($testResult && $target !== 'none')
+                            <div class="alert alert-{{ $testResult['tone'] }} py-2 mt-3 mb-0" role="status" style="white-space: pre-line;"
+                                 wire:key="test-result-{{ $testRuns }}" x-init="$el.scrollIntoView({ block: 'nearest', behavior: 'smooth' })">{{ $testResult['text'] }}</div>
+                        @endif
                     </div>
                 </div>
             </form>
