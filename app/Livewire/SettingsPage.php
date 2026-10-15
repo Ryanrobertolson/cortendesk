@@ -16,6 +16,7 @@ use App\Services\DeviceEnrollment;
 use App\Services\MailSettings;
 use App\Services\OidcService;
 use App\Services\ServerLink;
+use App\Support\ClientLink;
 use App\Support\LoginEmailVerification;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Artisan;
@@ -42,6 +43,8 @@ class SettingsPage extends Component
     public int $onlineWindow = 60;
 
     public string $rdgenUrl = '';
+
+    public string $clientUrlScheme = '';
 
     /** Whether the sign-in page links to the published client downloads. */
     public bool $downloadsOnLogin = true;
@@ -206,6 +209,7 @@ class SettingsPage extends Component
         $this->publicKey = Setting::server('public_key');
         $this->onlineWindow = (int) (Setting::get('online_window', (string) config('cortendesk.online_window')) ?: 60);
         $this->rdgenUrl = Setting::get('rdgen_url', config('cortendesk.rdgen_url')) ?? '';
+        $this->clientUrlScheme = ClientLink::scheme();
         $this->downloadsOnLogin = Setting::get('downloads_on_login', config('cortendesk.downloads_on_login') ? '1' : '0') === '1';
         $this->logRetentionDays = (int) (Setting::get('log_retention_days', (string) config('cortendesk.log_retention_days')) ?: 0);
         $this->requireDeviceApproval = (bool) Setting::get('require_device_approval', '0');
@@ -298,7 +302,7 @@ class SettingsPage extends Component
             str_starts_with($root, 'apprise') => 'notifications',
             $root === 'logRetentionDays' => 'maintenance',
             in_array($root, ['twoFactorRequired', 'twoFactorRequiredAdmins', 'emailLoginVerification', 'emailTrustedDeviceDays'], true) => 'security',
-            in_array($root, ['idServer', 'relayServer', 'publicKey', 'onlineWindow', 'rdgenUrl', 'downloadsOnLogin', 'relayServers', 'requireDeviceApproval', 'autoApproveSignedIn', 'defaultDeviceGroupId', 'serverAccessMode', 'serverIpMatch'], true) => 'server',
+            in_array($root, ['idServer', 'relayServer', 'publicKey', 'onlineWindow', 'rdgenUrl', 'clientUrlScheme', 'downloadsOnLogin', 'relayServers', 'requireDeviceApproval', 'autoApproveSignedIn', 'defaultDeviceGroupId', 'serverAccessMode', 'serverIpMatch'], true) => 'server',
             default => null,
         };
     }
@@ -314,6 +318,7 @@ class SettingsPage extends Component
                 'publicKey' => 'nullable|string|max:255',
                 'onlineWindow' => 'required|integer|min:20|max:600',
                 'rdgenUrl' => 'nullable|url|max:255',
+                'clientUrlScheme' => 'nullable|string|max:64',
                 'logRetentionDays' => 'required|integer|min:0|max:3650',
                 'defaultDeviceGroupId' => 'required|integer|min:0',
                 'serverAccessMode' => 'required|in:'.ServerLink::MODE_OPEN.','.ServerLink::MODE_APPROVED,
@@ -348,6 +353,13 @@ class SettingsPage extends Component
             $this->tab = self::tabForField((string) array_key_first($e->errors())) ?? $this->tab;
 
             throw $e;
+        }
+
+        if (trim($this->clientUrlScheme) !== '' && ClientLink::normalize($this->clientUrlScheme) === '') {
+            $this->tab = 'server';
+            $this->addError('clientUrlScheme', 'Letters, digits, "+", "-" and "." only, starting with a letter.');
+
+            return;
         }
 
         if ($this->defaultDeviceGroupId > 0 && ! DeviceGroup::query()->whereKey($this->defaultDeviceGroupId)->exists()) {
@@ -397,6 +409,8 @@ class SettingsPage extends Component
         Setting::put('public_key', trim($this->publicKey));
         Setting::put('online_window', (string) $this->onlineWindow);
         Setting::put('rdgen_url', rtrim($this->rdgenUrl, '/'));
+        $this->clientUrlScheme = ClientLink::normalize($this->clientUrlScheme) ?: ClientLink::DEFAULT;
+        Setting::put(ClientLink::SETTING, $this->clientUrlScheme);
         Setting::put('downloads_on_login', $this->downloadsOnLogin ? '1' : '0');
         Setting::put('log_retention_days', (string) $this->logRetentionDays);
         Setting::put('require_device_approval', $this->requireDeviceApproval ? '1' : '0');

@@ -478,7 +478,7 @@ class BackupService
 
             // Built beside the package and moved into place in one step, so
             // the listing never shows a half-written archive.
-            $tar = new PharData($work.'/archive.tar');
+            $tar = $this->openTar($work.'/archive.tar');
             $tar->buildFromDirectory($pkg);
             unset($tar);
 
@@ -598,7 +598,7 @@ class BackupService
     public function readManifest(string $path): array
     {
         try {
-            $tar = new PharData($path);
+            $tar = $this->openTar($path);
             if (! isset($tar['manifest.json'])) {
                 throw new RuntimeException('no manifest');
             }
@@ -636,7 +636,7 @@ class BackupService
             $manifest = $this->readManifest($path);
 
             mkdir($work, 0700, true);
-            (new PharData($path))->extractTo($work, null, true);
+            $this->openTar($path)->extractTo($work, null, true);
 
             $oldKey = trim((string) @file_get_contents($work.'/files/app_key'));
             $rekey = $oldKey !== '' && $oldKey !== (string) config('app.key')
@@ -830,6 +830,32 @@ class BackupService
     }
 
     // ---- helpers ----------------------------------------------------------
+
+    /**
+     * Open a tar by its bare name from inside its own directory.
+     *
+     * Given an absolute path, PharData checks each dotted component on the
+     * way down ("/var/www/example.com/...") as a possible archive. Under
+     * open_basedir each check above the allowed tree warns, Laravel turns
+     * the warning into an exception, and backup and restore both failed
+     * on such hosts (PR #106). The object keeps the resolved path, so the
+     * working directory is only borrowed for the constructor.
+     */
+    private function openTar(string $path): PharData
+    {
+        $previous = getcwd();
+        if (! @chdir(dirname($path))) {
+            throw new RuntimeException('Cannot open '.dirname($path).'.');
+        }
+
+        try {
+            return new PharData(basename($path));
+        } finally {
+            if ($previous !== false) {
+                @chdir($previous);
+            }
+        }
+    }
 
     private function lock(): Lock
     {

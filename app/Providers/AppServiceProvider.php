@@ -8,8 +8,10 @@ use App\Models\ApiToken;
 use App\Models\ClientToken;
 use App\Services\FileHealthProbeLimiter;
 use App\Services\SocketTcpProbe;
+use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -28,6 +30,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // Heartbeat, sysinfo and audit posts from RustDesk clients. A device
+        // heartbeats every 15 s, every 3 s during a session (20 a minute), so
+        // 120 leaves room. The per-address ceiling is for a whole fleet
+        // behind one NAT: about 1,500 idle devices or 300 in sessions.
+        RateLimiter::for('device-sync', fn (Request $request) => [
+            Limit::perMinute(120)->by('device|'.$request->ip().'|'.(string) $request->input('id')),
+            Limit::perMinute(6000)->by('address|'.$request->ip()),
+        ]);
+
         // Guard for the RustDesk client API: Authorization: Bearer <token>
         // issued by POST /api/login and stored in client_tokens.
         Auth::viaRequest('client-token', function (Request $request) {

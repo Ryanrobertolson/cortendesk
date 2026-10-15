@@ -224,8 +224,7 @@ class BackupManager extends Component
         $code = Artisan::call('cortendesk:backup');
         $output = trim(Artisan::output());
 
-        ConsoleAudit::record('backup.create', $code === 0 ? 'Ran a backup' : 'Backup failed', 'backup', null);
-
+        // The command writes the console log entry, with the outcome.
         $this->notice = ['tone' => $code === 0 ? 'success' : 'danger', 'text' => $output];
     }
 

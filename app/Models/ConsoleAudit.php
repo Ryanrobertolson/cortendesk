@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Request;
+use Illuminate\Support\Str;
 
 /**
  * Record of a mutating action performed in the console (who did what).
@@ -46,8 +47,28 @@ class ConsoleAudit extends Model
             'action' => $action,
             'target_type' => $targetType,
             'target_id' => $targetId,
-            'summary' => $summary,
+            'summary' => Str::limit($summary, 250),
             'ip' => Request::ip(),
+        ]);
+    }
+
+    /**
+     * Log an action nobody clicked, such as a scheduled backup. Shown as
+     * "system" in the console log.
+     */
+    public static function system(
+        string $action,
+        string $summary,
+        ?string $targetType = null,
+        ?string $targetId = null,
+    ): void {
+        static::create([
+            'user_id' => null,
+            'username' => 'system',
+            'action' => $action,
+            'target_type' => $targetType,
+            'target_id' => $targetId,
+            'summary' => Str::limit($summary, 250),
         ]);
     }
 }

@@ -6,6 +6,7 @@ use App\Models\Setting;
 use Firebase\JWT\JWK;
 use Firebase\JWT\JWT;
 use Firebase\JWT\Key;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Crypt;
@@ -205,16 +206,20 @@ class OidcService
     {
         $discovery = $this->discovery();
 
-        $response = Http::asForm()
-            ->timeout(15)
-            ->post($discovery['token_endpoint'] ?? '', [
-                'grant_type' => 'authorization_code',
-                'code' => $code,
-                'redirect_uri' => $redirectUri,
-                'client_id' => $this->setting('oidc_client_id'),
-                'client_secret' => $this->clientSecret(),
-                'code_verifier' => $verifier,
-            ]);
+        try {
+            $response = Http::asForm()
+                ->timeout(15)
+                ->post($discovery['token_endpoint'] ?? '', [
+                    'grant_type' => 'authorization_code',
+                    'code' => $code,
+                    'redirect_uri' => $redirectUri,
+                    'client_id' => $this->setting('oidc_client_id'),
+                    'client_secret' => $this->clientSecret(),
+                    'code_verifier' => $verifier,
+                ]);
+        } catch (ConnectionException) {
+            throw new OidcException('Could not reach the provider to finish sign-in. Try again.');
+        }
 
         if (! $response->successful()) {
             throw new OidcException('Token exchange failed ('.$response->status().'). '
@@ -363,7 +368,15 @@ class OidcService
         $url = $this->discoveryUrl($configured);
 
         $document = $this->cached('oidc:discovery:'.sha1($url), function () use ($url) {
-            $response = Http::timeout(10)->get($url);
+            // Unreachable reads as unreadable: a message, not a 500 on the
+            // sign-in path.
+            try {
+                $response = Http::timeout(10)->get($url);
+            } catch (ConnectionException $e) {
+                Log::warning('OIDC: provider unreachable', ['url' => $url, 'error' => $e->getMessage()]);
+
+                return null;
+            }
 
             if (! $response->successful()) {
                 return null;
@@ -500,7 +513,11 @@ class OidcService
         $url = $this->discoveryUrl($this->setting('oidc_discovery_url'));
 
         $jwks = $this->cached('oidc:jwks:'.sha1($url), function () use ($discovery) {
-            $response = Http::timeout(10)->get((string) ($discovery['jwks_uri'] ?? ''));
+            try {
+                $response = Http::timeout(10)->get((string) ($discovery['jwks_uri'] ?? ''));
+            } catch (ConnectionException) {
+                return null;
+            }
 
             if (! $response->successful()) {
                 return null;

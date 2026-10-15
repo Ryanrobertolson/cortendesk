@@ -53,6 +53,18 @@ class LoginEmailVerification
         return ! TrustedDevice::matches($user, $request);
     }
 
+    /** j••••@example.com — enough to recognise, not enough to harvest. */
+    public static function maskEmail(string $email): string
+    {
+        if (! str_contains($email, '@')) {
+            return '';
+        }
+
+        [$local, $domain] = explode('@', $email, 2);
+
+        return mb_substr($local, 0, 1).str_repeat('•', max(1, mb_strlen($local) - 1)).'@'.$domain;
+    }
+
     /** How many accounts the switch cannot protect, for the settings screen. */
     public static function usersWithoutEmail(): int
     {

@@ -208,7 +208,7 @@ class AuthController extends Controller
         }
 
         return view('auth.email-challenge', [
-            'sentTo' => $this->maskEmail((string) $request->session()->get('email_verify.sent_to')),
+            'sentTo' => LoginEmailVerification::maskEmail((string) $request->session()->get('email_verify.sent_to')),
         ]);
     }
 
@@ -354,18 +354,6 @@ class AuthController extends Controller
         return ($user && $user->is_active) ? $user : null;
     }
 
-    /** j••••@example.com — enough to recognise, not enough to harvest. */
-    private function maskEmail(string $email): string
-    {
-        if (! str_contains($email, '@')) {
-            return '';
-        }
-
-        [$local, $domain] = explode('@', $email, 2);
-
-        return mb_substr($local, 0, 1).str_repeat('•', max(1, mb_strlen($local) - 1)).'@'.$domain;
-    }
-
     /** The TOTP / recovery-code challenge screen. */
     public function showTwoFactorChallenge(Request $request): View|RedirectResponse
     {
@@ -480,21 +468,9 @@ class AuthController extends Controller
      */
     private function consumeTotp(User $user, string $code): array
     {
-        $secret = $user->totp_secret;
-        $timestep = $secret ? TwoFactor::verify($secret, $code) : null;
+        $error = TwoFactor::consumeTotp($user, $code);
 
-        if ($timestep === null) {
-            return ['ok' => false, 'message' => 'That code is incorrect or has expired.'];
-        }
-
-        // Replay guard: reject a code from a timestep already used (or older).
-        if ($user->totp_last_timestep !== null && $timestep <= $user->totp_last_timestep) {
-            return ['ok' => false, 'message' => 'That code has already been used. Wait for the next one.'];
-        }
-
-        $user->forceFill(['totp_last_timestep' => $timestep])->save();
-
-        return ['ok' => true];
+        return $error === null ? ['ok' => true] : ['ok' => false, 'message' => $error];
     }
 
     /**

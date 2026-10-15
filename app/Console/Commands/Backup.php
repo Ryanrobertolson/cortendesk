@@ -2,10 +2,13 @@
 
 namespace App\Console\Commands;
 
+use App\Models\ConsoleAudit;
 use App\Models\Setting;
+use App\Services\AppriseNotifications;
 use App\Services\Backups\BackupService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -51,7 +54,7 @@ class Backup extends Command
         } catch (Throwable $e) {
             $this->error('Backup failed: '.$e->getMessage());
             Log::error('Backup failed', ['error' => $e->getMessage()]);
-            $this->record(['at' => $summary['at'], 'ok' => false, 'trigger' => $summary['trigger'], 'message' => $e->getMessage()]);
+            $this->record(['at' => $summary['at'], 'ok' => false, 'trigger' => $summary['trigger'], 'message' => 'Backup failed: '.$e->getMessage()]);
 
             return self::FAILURE;
         }
@@ -95,9 +98,21 @@ class Backup extends Command
         return $summary['ok'] ? self::SUCCESS : self::FAILURE;
     }
 
-    /** What Settings -> Backups shows as the last outcome. */
+    /**
+     * Keep the outcome for Settings -> Backups, put it in the console log
+     * (as "system" when the scheduler ran it) and send the notification.
+     */
     private function record(array $summary): void
     {
         Setting::put('backup_last_result', json_encode($summary));
+
+        $line = ucfirst($summary['trigger']).' backup: '.$summary['message'];
+        Auth::check()
+            ? ConsoleAudit::record('backup.create', $line, 'backup', $summary['name'] ?? null)
+            : ConsoleAudit::system('backup.create', $line, 'backup', $summary['name'] ?? null);
+
+        $summary['ok']
+            ? app(AppriseNotifications::class)->send('backup.completed', 'Backup completed', $line, 'backup')
+            : app(AppriseNotifications::class)->send('backup.failed', 'Backup failed', $line, 'backup');
     }
 }

@@ -5,6 +5,10 @@
 set -e
 cd /app
 
+# artisan switches to www-data when run as root in this image (see artisan);
+# the setup below needs root. Unset again before supervisord starts.
+export CORTENDESK_AS_ROOT=1
+
 _is_uint() { case "$1" in ''|*[!0-9]*) return 1 ;; *) return 0 ;; esac; }
 
 # --- file descriptors --------------------------------------------------------
@@ -183,7 +187,9 @@ fi
 # data directory goes into every backup too (key pair, peer database).
 export CORTENDESK_BACKUPS_PATH="${CORTENDESK_BACKUPS_PATH:-/data/backups}"
 mkdir -p "$CORTENDESK_BACKUPS_PATH"
-chown www-data:www-data "$CORTENDESK_BACKUPS_PATH"
+# -R: archives written by a root `docker exec` before 1.14 were unreadable to
+# the console (listed as "v? unknown", could not be deleted).
+chown -R www-data:www-data "$CORTENDESK_BACKUPS_PATH"
 chmod 700 "$CORTENDESK_BACKUPS_PATH"
 if [ "$EMBEDDED" = 1 ]; then
     export CORTENDESK_RUSTDESK_DIR="${CORTENDESK_RUSTDESK_DIR:-$RD_DIR}"
@@ -359,6 +365,11 @@ envsubst '${RUSTDESK_WS_HOST} ${NGINX_RESOLVER} ${CORTENDESK_UPLOAD_BODY_MB} ${C
 php artisan config:cache --no-interaction -q
 php artisan route:cache --no-interaction -q
 php artisan view:cache --no-interaction -q
+
+# Hand storage back to www-data: the caches above were built as root, and a
+# root `docker exec` before 1.14 could leave cache folders php-fpm cannot write.
+chown -R www-data:www-data /app/storage /app/bootstrap/cache
+unset CORTENDESK_AS_ROOT
 
 if [ "$EMBEDDED" = 1 ]; then
     echo "[cortendesk] ready — console on :$CORTENDESK_HTTP_PORT, ID server on :21116, relay on :21117"

@@ -17,7 +17,7 @@ use Illuminate\Support\Facades\Route;
 | (client prints "Done!"); a non-empty body is printed verbatim on error.
 */
 
-Route::middleware(['auth:api-token', 'throttle:120,1'])
+Route::middleware(['auth:api-token', 'throttle:120,1,client-cli'])
     ->prefix('devices')
     ->group(function () {
         // B2 — `rustdesk --assign`. Base assign needs Device rw; any

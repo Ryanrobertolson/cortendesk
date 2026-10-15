@@ -56,7 +56,7 @@
                                     </div>
                                 </td>
                                 <td>
-                                    <a href="rustdesk://{{ $s->rustdesk_id }}" title="Connect with RustDesk" class="fs-13">{{ $s->rustdesk_id }}</a>
+                                    <a href="{{ \App\Support\ClientLink::to($s->rustdesk_id) }}" title="Connect with RustDesk" class="fs-13">{{ $s->rustdesk_id }}</a>
                                 </td>
                                 <td>
                                     @switch((int) $s->conn_type)
@@ -123,7 +123,7 @@
                                 </div>
                             @endif
                             <div class="rd-mini-foot">
-                                <a href="rustdesk://{{ $s->rustdesk_id }}" title="Connect with RustDesk"
+                                <a href="{{ \App\Support\ClientLink::to($s->rustdesk_id) }}" title="Connect with RustDesk"
                                    class="fs-13 text-truncate">{{ $s->rustdesk_id }}</a>
                                 <span class="rd-mini-sub text-nowrap"><i class="rd-dot text-success"></i><span
                                         title="{{ $s->created_at }}">{{ $s->created_at->diffForHumans(short: true) }}</span></span>

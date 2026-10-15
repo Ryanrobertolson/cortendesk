@@ -32,6 +32,8 @@ class AppriseNotifications
         'console.login_failed' => 'Failed console login',
         'security.alarm' => 'Security alarm',
         'remote_connection.failure' => 'Repeated remote connection failure',
+        'backup.completed' => 'Backup completed',
+        'backup.failed' => 'Backup or off-site copy failed',
     ];
 
     /**
@@ -46,6 +48,8 @@ class AppriseNotifications
         'console.login_failed' => 'warning',
         'security.alarm' => 'failure',
         'remote_connection.failure' => 'failure',
+        'backup.completed' => 'success',
+        'backup.failed' => 'failure',
     ];
 
     /** Offline and recovery share a subject; a newer one makes an older one stale. */

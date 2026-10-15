@@ -104,6 +104,13 @@
                                     <div class="form-text">Opened by the sidebar's <strong>Build Installers</strong> entry — point it at your own rdgen instance. Leave empty to hide the menu entry.</div>
                                 </div>
                                 <div class="mb-3">
+                                    <label class="form-label">Client URL scheme</label>
+                                    <input type="text" class="form-control @error('clientUrlScheme') is-invalid @enderror"
+                                           wire:model="clientUrlScheme" placeholder="rustdesk" style="max-width: 280px;">
+                                    @error('clientUrlScheme') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                                    <div class="form-text">Used by the links that open a device in the RustDesk client. A client built with rdgen under another app name registers its own, such as <code>level1-tech-support</code>.</div>
+                                </div>
+                                <div class="mb-3">
                                     <div class="form-check form-switch">
                                         <input class="form-check-input" type="checkbox" role="switch" id="downloadsOnLogin"
                                                wire:model="downloadsOnLogin">
@@ -277,7 +284,7 @@
                                                wire:model="twoFactorRequired">
                                         <label class="form-check-label" for="twoFactorRequired">Require two-factor authentication for all users</label>
                                     </div>
-                                    <div class="form-text">Signed-in users without 2FA are sent to the setup screen and can't use the console until they enroll.</div>
+                                    <div class="form-text">Signed-in users without 2FA are sent to the setup screen and can't use the console until they enroll. The RustDesk client refuses their password sign-in until then.</div>
                                 </div>
                                 <div class="mb-3">
                                     <div class="form-check form-switch">
@@ -300,7 +307,8 @@
                                         @if ($mailEnabled)
                                             Users without an authenticator app get a 6-digit code by email the first time they
                                             sign in from a browser this console has not seen. The browser stays trusted for
-                                            {{ $emailTrustedDeviceDays }} days.
+                                            {{ $emailTrustedDeviceDays }} days. The RustDesk client asks for a code at every
+                                            password sign-in, and refuses it while mail is down.
                                             Accounts with 2FA enrolled are unaffected — they answer the authenticator instead.
                                             @if ($usersWithoutEmail > 0)
                                                 <span class="text-warning d-block mt-1">
@@ -493,7 +501,7 @@
                                         <label class="form-check-label" for="oidcDisableLocalLogin">Disable password sign-in</label>
                                     </div>
                                     <div class="form-text">
-                                        Hides the password form so SSO is the only way in. It takes effect only while SSO is
+                                        Turns away passwords on the console and in the RustDesk client, so SSO is the only way in. It takes effect only while SSO is
                                         enabled and configured, so a provider outage restores password sign-in by itself.
                                         <code>CORTENDESK_OIDC_DISABLED=true</code> in <code>.env</code> forces it off from the shell.
                                     </div>

@@ -107,6 +107,16 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Client URL scheme
+    |--------------------------------------------------------------------------
+    | Scheme of the "open in RustDesk" links. A client built with rdgen under
+    | another app name registers that name, lowercased, instead of "rustdesk".
+    | Overridable per-install in Settings.
+    */
+    'client_url_scheme' => env('CORTENDESK_CLIENT_URL_SCHEME', 'rustdesk'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Client Downloads
     |--------------------------------------------------------------------------
     | Installers uploaded under System -> Client Downloads and offered on the

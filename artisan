@@ -6,6 +6,23 @@ use Symfony\Component\Console\Input\ArgvInput;
 
 define('LARAVEL_START', microtime(true));
 
+// In the Docker image, `docker exec ... php artisan` runs as root and leaves
+// root-owned cache and backup files that php-fpm (www-data) cannot open: a
+// root-run backup broke "Back up now" for good. Become www-data first. The
+// entrypoint sets CORTENDESK_AS_ROOT=1 for its own setup.
+if (getenv('CORTENDESK_DOCKER') === '1' && getenv('CORTENDESK_AS_ROOT') !== '1'
+    && function_exists('posix_geteuid') && posix_geteuid() === 0
+    && ($www = posix_getpwnam('www-data')) !== false) {
+    if (posix_initgroups('www-data', $www['gid']) && posix_setgid($www['gid']) && posix_setuid($www['uid'])) {
+        // Tools such as tinker keep their state under HOME.
+        $home = is_dir($www['dir']) && is_writable($www['dir']) ? $www['dir'] : sys_get_temp_dir();
+        putenv('HOME='.$home);
+        $_SERVER['HOME'] = $_ENV['HOME'] = $home;
+    } else {
+        fwrite(STDERR, "warning: could not switch to www-data, running as root. Use: docker compose exec -u www-data ...\n");
+    }
+}
+
 // Register the Composer autoloader...
 require __DIR__.'/vendor/autoload.php';
 

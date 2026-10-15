@@ -248,7 +248,7 @@
                             @if ($trashed)
                                 <span class="fw-semibold">{{ $device->rustdesk_id }}</span>
                             @else
-                                <a href="rustdesk://{{ $device->rustdesk_id }}" class="fw-semibold"
+                                <a href="{{ \App\Support\ClientLink::to($device->rustdesk_id) }}" class="fw-semibold"
                                    title="Connect with RustDesk">{{ $device->rustdesk_id }}</a>
                             @endif
                         </td>
@@ -399,7 +399,7 @@
                                 @if ($trashed)
                                     <span class="rd-mini-title text-truncate">{{ $device->rustdesk_id }}</span>
                                 @else
-                                    <a href="rustdesk://{{ $device->rustdesk_id }}" class="rd-mini-title text-truncate"
+                                    <a href="{{ \App\Support\ClientLink::to($device->rustdesk_id) }}" class="rd-mini-title text-truncate"
                                        title="Connect with RustDesk">{{ $device->rustdesk_id }}</a>
                                 @endif
                                 @if ($trashed)

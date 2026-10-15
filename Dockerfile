@@ -65,7 +65,8 @@ ENV APP_ENV=production \
     CACHE_STORE=file \
     QUEUE_CONNECTION=sync \
     CORTENDESK_NATIVE_WEBCLIENT=true \
-    CORTENDESK_EMBEDDED_SERVER=true
+    CORTENDESK_EMBEDDED_SERVER=true \
+    CORTENDESK_DOCKER=1
 
 # Carried through so the console can report which server it is running, and so
 # `docker inspect` answers the question without a shell.

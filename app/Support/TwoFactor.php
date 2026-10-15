@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\User;
 use BaconQrCode\Renderer\Image\SvgImageBackEnd;
 use BaconQrCode\Renderer\ImageRenderer;
 use BaconQrCode\Renderer\RendererStyle\RendererStyle;
@@ -97,6 +98,37 @@ class TwoFactor
                 return $timestep;
             }
         }
+
+        return null;
+    }
+
+    /**
+     * Check a user's TOTP code and burn its timestep. Used by the console
+     * challenge and the RustDesk client sign-in alike.
+     *
+     * Returns null on success, or the message to show. The pointer moves in
+     * one conditional UPDATE, so two requests carrying the same code cannot
+     * both pass the replay guard.
+     */
+    public static function consumeTotp(User $user, string $code): ?string
+    {
+        $secret = $user->totp_secret;
+        $timestep = $secret ? self::verify($secret, $code) : null;
+
+        if ($timestep === null) {
+            return 'That code is incorrect or has expired.';
+        }
+
+        $claimed = User::query()
+            ->whereKey($user->getKey())
+            ->where(fn ($q) => $q->whereNull('totp_last_timestep')->orWhere('totp_last_timestep', '<', $timestep))
+            ->update(['totp_last_timestep' => $timestep]);
+
+        if ($claimed === 0) {
+            return 'That code has already been used. Wait for the next one.';
+        }
+
+        $user->forceFill(['totp_last_timestep' => $timestep])->syncOriginalAttribute('totp_last_timestep');
 
         return null;
     }

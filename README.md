@@ -15,18 +15,18 @@ Built on Laravel + Livewire with precompiled assets: **there is no frontend buil
 ## Features
 
 **Console**
-- **Devices** — live fleet with presence, platform icons, aliases, device groups ("folders"), pre-registration, and a recycle bin. One-click connect via `rustdesk://` deep links or the built-in web client. Pick your own table columns (CPU, memory, IP, UUID and more — saved per user), export the current view to CSV, and multi-select rows to bulk-delete or add devices to an address book. Each device has a detail page with its connections, file transfers, notifications and address books.
+- **Devices** — live fleet with presence, platform icons, aliases, device groups ("folders"), pre-registration, and a recycle bin. One-click connect via `rustdesk://` deep links (the scheme is a setting, for clients built with rdgen) or the built-in web client. Pick your own table columns (CPU, memory, IP, UUID and more — saved per user), export the current view to CSV, and multi-select rows to bulk-delete or add devices to an address book. Each device has a detail page with its connections, file transfers, notifications and address books.
 - **Server access control** — with the embedded ID server (or CortenDesk Server 1.1.0+), limit the server to devices you approved, and mark devices incoming only so they can be controlled but cannot start sessions. New devices can land in a default group, and a pending device can be approved automatically when its user signs in. The ID server enforces both. It also reports each device's LAN address seen during connection setup, shown as an optional LAN IP column. See [CortenDesk Server](https://github.com/marcpope/cortendesk-server#device-policy-from-a-cortendesk-console).
 - **Users & access scoping** — a detail page per user shows their devices, address books, sign-ins, console actions and connections. Admins see everything; regular users see only their own devices plus device groups granted to them or their user groups. The RustDesk client API is scoped with the same rules.
 - **Address books** — full support for the modern multi-address-book API *and* the legacy API: shared books, share rules (everyone / user / group), tags with colors.
 - **Audit logs** — connections (with the note RustDesk clients can leave at the end of a session), file transfers, console logins, and security alarms (brute-force/blocked-access events); filterable, exportable to CSV, with configurable retention and automatic nightly pruning.
-- **Single sign-on (OIDC)** — sign in with Keycloak, Authentik, Entra ID, Okta, Google Workspace or any OpenID Connect provider. Authorization-code flow with PKCE, verified ID tokens, just-in-time account creation with optional approval, an email-domain allowlist, and optional provider sign-out. Password sign-in can be switched off — and returns by itself if SSO is disabled or left incompletely configured. For a provider that is unreachable while still configured, `CORTENDESK_OIDC_DISABLED=true` forces it off and brings the password form back.
+- **Single sign-on (OIDC)** — sign in with Keycloak, Authentik, Entra ID, Okta, Google Workspace or any OpenID Connect provider. Authorization-code flow with PKCE, verified ID tokens, just-in-time account creation with optional approval, an email-domain allowlist, and optional provider sign-out. Password sign-in can be switched off, on the console and in the RustDesk client — and returns by itself if SSO is disabled or left incompletely configured. For a provider that is unreachable while still configured, `CORTENDESK_OIDC_DISABLED=true` forces it off and brings the password form back.
 - **Device policies (strategies)** — push client settings to devices from the console: permissions, security and password rules, capture options. Assign to a device, a user or a device group, with the most specific assignment winning. Optionally enforced, so a local change is reverted on the next heartbeat.
-- **Two-factor authentication** — TOTP with single-use recovery codes, optionally required for everyone or for administrators only, with an administrator reset and a break-glass command.
+- **Two-factor authentication** — TOTP with single-use recovery codes, optionally required for everyone or for administrators only, with an administrator reset and a break-glass command. The RustDesk client asks for the same code when it signs in with a password.
 - **Delegated administration** — roles with a permission matrix over each console area, so you can grant someone the users screen without handing them the whole console.
 - **Automation API** — scoped bearer tokens and a REST API for users, devices, groups, address books and audit logs, plus support for the RustDesk client's `--assign` flag for unattended deployment.
 - **Email** — SMTP settings with a test send, user invitations by email, self-service password reset, and an optional emailed code when signing in from a new browser.
-- **Backups** — one archive with the whole database, every setting, the app key and the bundled server's key pair and peer database. Runs daily, keeps 7 daily, 8 weekly and 6 monthly, mirrors them to FTP/FTPS or S3-compatible storage, and restores from the list or an upload, re-keying encrypted values for a fresh install.
+- **Backups** — one archive with the whole database, every setting, the app key and the bundled server's key pair and peer database. Runs daily, keeps 7 daily, 8 weekly and 6 monthly, mirrors them to FTP/FTPS or S3-compatible storage, and restores from the list or an upload, re-keying encrypted values for a fresh install. Every run goes in the console log, and notifications can report each success or failure.
 - **Dashboard** — live stat tiles, active sessions, 14-day connection charts, platform and version breakdowns.
 - **Importer** — one artisan command migrates everything (users with passwords intact, devices, address books, audit history) from a `lejianwen/rustdesk-api` database.
 - **Mobile-first** — every screen works on a phone; wide tables degrade to card lists. Dark and light themes.
@@ -60,7 +60,7 @@ docker run -d --name cortendesk \
   -e APP_URL=https://rd.example.com \
   -p 8080:8080 -p 21115-21117:21115-21117 -p 21116:21116/udp \
   -v cortendesk-data:/data \
-  ghcr.io/marcpope/cortendesk:1.13.2
+  ghcr.io/marcpope/cortendesk:1.14.0
 ```
 
 `APP_URL` is the only setting that matters: it is the address your clients and
@@ -108,6 +108,7 @@ and must allow the same size.
 | Variable | Default | What it does |
 |---|---|---|
 | `CORTENDESK_BACKUPS_PATH` | `/data/backups` | Where Settings → Backups writes its archives. Keep it in the volume. |
+| `CORTENDESK_CLIENT_URL_SCHEME` | `rustdesk` | Default scheme of the "open in RustDesk" links. A client built with rdgen registers its own app name instead. Settings → Server overrides it. |
 | `CORTENDESK_RUSTDESK_DIR` | `/data/rustdesk` when embedded | The ID server's data directory, so backups carry the key pair and peer database. Empty with external servers. |
 | `CORTENDESK_HTTP_PORT` | `8080` | Port nginx listens on inside the container. The healthcheck and the embedded hbbs follow it. Publish it with `-p <host>:<port>`. |
 | `CORTENDESK_UPDATE_CHECK` | `true` | `false` stops the request to GitHub every 6 hours and hides the "update available" badge and status line. |

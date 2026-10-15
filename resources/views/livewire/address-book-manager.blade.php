@@ -222,7 +222,7 @@
                                             <div class="rd-cell">
                                                 <x-platform-icon :platform="$entry->platform ?: 'unknown'" size="fs-20"/>
                                                 <div class="min-width-0">
-                                                    <a href="rustdesk://{{ $entry->rustdesk_id }}"
+                                                    <a href="{{ \App\Support\ClientLink::to($entry->rustdesk_id) }}"
                                                        class="rd-cell-title text-truncate"
                                                        title="Connect with RustDesk">{{ $entry->hostname ?: $entry->rustdesk_id }}</a>
                                                     <span class="rd-cell-sub">
@@ -279,7 +279,7 @@
                                             <div class="d-flex align-items-center gap-2 min-width-0">
                                                 <x-platform-icon :platform="$entry->platform ?: 'unknown'" size="fs-22"/>
                                                 <div class="min-width-0">
-                                                    <a href="rustdesk://{{ $entry->rustdesk_id }}" class="rd-mini-title text-truncate"
+                                                    <a href="{{ \App\Support\ClientLink::to($entry->rustdesk_id) }}" class="rd-mini-title text-truncate"
                                                        title="Connect with RustDesk">{{ $entry->hostname ?: $entry->rustdesk_id }}</a>
                                                     <span class="rd-mini-sub text-truncate">
                                                         {{ $entry->rustdesk_id }}@if ($entry->alias) · {{ $entry->alias }}@endif

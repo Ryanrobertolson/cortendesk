@@ -20,8 +20,8 @@
                     </div>
                     <div class="rd-toolbar-actions">
                         <button type="button" class="btn btn-primary" wire:click="backupNow" wire:loading.attr="disabled" wire:target="backupNow" @disabled(! $canManage)>
-                            <span wire:loading.remove wire:target="backupNow"><i class="ri-archive-line"></i>Back up now</span>
-                            <span wire:loading wire:target="backupNow"><i class="ri-loader-4-line"></i>Backing up…</span>
+                            <span wire:loading.remove wire:target="backupNow"><i class="ri-archive-line me-1"></i>Back up now</span>
+                            <span wire:loading wire:target="backupNow"><i class="ri-loader-4-line me-1"></i>Backing up…</span>
                         </button>
                     </div>
                 </div>

@@ -34,15 +34,24 @@ use Illuminate\Support\Facades\Route;
 Route::get('/version', fn () => response(config('cortendesk.api_version')));
 
 // ---- Tokenless (rate-limited) ------------------------------------------
-Route::middleware('throttle:240,1')->group(function () {
+// Every throttle here carries its own prefix. Unnamed limits all key on the
+// address alone, so without one, device heartbeats from an office behind one
+// NAT spent the sign-in budget and the sign-in limit counted every request
+// twice (group + route).
+Route::middleware('throttle:240,1,client-auth')->group(function () {
     Route::match(['get', 'head'], '/login-options', [ClientAuthController::class, 'loginOptions']);
-    Route::post('/login', [ClientAuthController::class, 'login'])->middleware('throttle:20,1');
+    Route::post('/login', [ClientAuthController::class, 'login'])->middleware('throttle:20,1,client-login');
 
     // Client SSO (spec §6–7). Tokenless: the app has no token yet. The poll is
     // deliberately generous — the client polls once a second for 180 seconds.
-    Route::post('/oidc/auth', [ClientOidcController::class, 'auth'])->middleware('throttle:20,1');
-    Route::get('/oidc/auth-query', [ClientOidcController::class, 'authQuery'])->middleware('throttle:400,1');
+    Route::post('/oidc/auth', [ClientOidcController::class, 'auth'])->middleware('throttle:20,1,client-oidc');
+    Route::get('/oidc/auth-query', [ClientOidcController::class, 'authQuery'])->middleware('throttle:400,1,client-oidc-poll');
+});
 
+// Device sync: a limit per device and a ceiling per address, so a fleet
+// behind one NAT is not cut off at the same count as a single machine
+// (AppServiceProvider defines `device-sync`).
+Route::middleware('throttle:device-sync')->group(function () {
     Route::post('/heartbeat', [SyncController::class, 'heartbeat']);
     Route::post('/sysinfo', [SyncController::class, 'sysinfo']);
 
@@ -93,7 +102,7 @@ Route::middleware('auth:client')->group(function () {
 | Called by hbbs, not by clients: it pulls the device policy and reports LAN
 | addresses. Bearer = CORTENDESK_SERVER_SECRET. Spec: docs/server-link.md.
 */
-Route::middleware([VerifyServerSecret::class, 'throttle:600,1'])
+Route::middleware([VerifyServerSecret::class, 'throttle:600,1,server-link'])
     ->prefix('server')
     ->group(function () {
         Route::get('/policy', [ServerLinkController::class, 'policy']);
@@ -110,7 +119,7 @@ Route::middleware([VerifyServerSecret::class, 'throttle:600,1'])
 | the token's per-resource matrix (none|r|rw) gates access. Envelope:
 | {code,data,message}. Rate-limited. Spec: docs/admin-api.md. (PLAN B1.)
 */
-Route::middleware(['auth:api-token', 'throttle:120,1'])
+Route::middleware(['auth:api-token', 'throttle:120,1,admin-api'])
     ->prefix('v1')
     ->group(function () {
         // Users --------------------------------------------------------------

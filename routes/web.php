@@ -37,9 +37,9 @@ Route::middleware('guest')->group(function () {
     // silently swapped for a new identity (test your own invite in a private
     // window). The token is the credential; the throttle bounds guessing.
     Route::get('/invite/{token}', [InvitationController::class, 'show'])
-        ->middleware('throttle:20,1')->name('invite.show');
+        ->middleware('throttle:20,1,invite')->name('invite.show');
     Route::post('/invite/{token}', [InvitationController::class, 'accept'])
-        ->middleware('throttle:20,1')->name('invite.accept');
+        ->middleware('throttle:20,1,invite')->name('invite.accept');
 
     // Self-service password reset. Guest-only: a signed-in user has no need of
     // it, and it must never swap the current session for another identity.
@@ -47,11 +47,11 @@ Route::middleware('guest')->group(function () {
     // one place an outsider can probe for accounts.
     Route::get('/forgot-password', [PasswordResetController::class, 'showRequest'])->name('password.request');
     Route::post('/forgot-password', [PasswordResetController::class, 'sendLink'])
-        ->middleware('throttle:6,1')->name('password.email');
+        ->middleware('throttle:6,1,password-email')->name('password.email');
     Route::get('/reset-password/{token}', [PasswordResetController::class, 'showReset'])
-        ->middleware('throttle:20,1')->name('password.reset');
+        ->middleware('throttle:20,1,password-reset')->name('password.reset');
     Route::post('/reset-password/{token}', [PasswordResetController::class, 'reset'])
-        ->middleware('throttle:20,1')->name('password.update');
+        ->middleware('throttle:20,1,password-reset')->name('password.update');
 
     // OIDC single sign-on (PLAN D3). The callback is a GET the provider
     // redirects the browser to, so it carries no CSRF token of ours — the
@@ -74,7 +74,7 @@ Route::get('/login/oidc/client-callback',
 // neither case should be redirected. Only published rows are visible, the
 // controller streams the bytes as an attachment, and the throttle bounds a
 // scraper (the files are the expensive part, not the page).
-Route::middleware('throttle:60,1')->group(function () {
+Route::middleware('throttle:60,1,downloads')->group(function () {
     Route::get('/downloads', [ClientDownloadController::class, 'index'])->name('downloads.index');
     Route::get('/downloads/{download}', [ClientDownloadController::class, 'show'])->name('downloads.show');
 });
@@ -86,7 +86,7 @@ Route::middleware('auth')->group(function () {
     Route::view('/account', 'account.index')->name('account');
     // The topbar theme switch saves here (issue #94).
     Route::post('/account/theme', [AccountThemeController::class, 'update'])
-        ->middleware('throttle:30,1')->name('account.theme');
+        ->middleware('throttle:30,1,account-theme')->name('account.theme');
 
     // Two-Factor Authentication on its own URL (enrollment wizard, PLAN B6).
     // Kept separate because the enforcement middleware sends un-enrolled users

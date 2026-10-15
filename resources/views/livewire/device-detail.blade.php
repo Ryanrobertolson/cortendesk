@@ -24,7 +24,7 @@
                     <span class="badge bg-info-subtle text-info rd-status-block" title="Can be controlled, cannot start sessions">Incoming only</span>
                 @endif
                 @unless ($device->trashed())
-                    <a href="rustdesk://{{ $device->rustdesk_id }}" class="btn btn-sm btn-outline-light"
+                    <a href="{{ \App\Support\ClientLink::to($device->rustdesk_id) }}" class="btn btn-sm btn-outline-light"
                        title="Connect with RustDesk"><i class="ri-links-line me-1"></i>RustDesk</a>
                     @if (config('cortendesk.native_webclient'))
                         <a href="{{ route('webclient') }}?id={{ $device->rustdesk_id }}"
