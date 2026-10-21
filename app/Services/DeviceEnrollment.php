@@ -2,11 +2,13 @@
 
 namespace App\Services;
 
+use App\Console\Commands\CheckDeviceNotifications;
 use App\Models\ClientToken;
 use App\Models\Device;
 use App\Models\DeviceGroup;
 use App\Models\Setting;
 use App\Models\User;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -51,6 +53,72 @@ class DeviceEnrollment
         }
 
         return $attributes;
+    }
+
+    /**
+     * Register the device a client just signed in from (issue #110). Phones
+     * never post sysinfo or heartbeats (iOS never, Android only while its
+     * incoming service runs), so without this their device has no row, never
+     * reaches the server policy's allow list, and approved-only mode refuses
+     * every session they start even though their user is signed in.
+     *
+     * A new row follows the same rules as one created by sysinfo: pending when
+     * the approval gate is on, default group, approval by sign-in. A pending
+     * row is approved when the setting says so; a recycled one stays recycled.
+     *
+     * @param  array{id?: ?string, uuid?: ?string, os?: ?string}  $client
+     */
+    public static function signedIn(User $user, array $client, ?string $ip = null): ?Device
+    {
+        $id = trim((string) ($client['id'] ?? ''));
+        if ($id === '') {
+            return null;
+        }
+
+        $device = Device::withTrashed()->where('rustdesk_id', $id)->first();
+        if ($device?->trashed()) {
+            return null;
+        }
+
+        if ($device === null) {
+            try {
+                $device = Device::create(['rustdesk_id' => $id] + self::defaultsForNew([
+                    // No hostname: an empty one is what makes the heartbeat
+                    // ask for sysinfo, so a client that does send it fills it.
+                    'uuid' => (string) ($client['uuid'] ?? ''),
+                    'os' => (string) ($client['os'] ?? ''),
+                    'status' => Device::approvalGateEnabled() ? Device::STATUS_PENDING : Device::STATUS_ACTIVE,
+                    'user_id' => $user->id,
+                    'registered_ip' => $ip,
+                ]));
+            } catch (UniqueConstraintViolationException) {
+                // The client's first sysinfo landed in the same instant.
+                $device = Device::query()->where('rustdesk_id', $id)->first();
+                if ($device === null) {
+                    return null;
+                }
+            }
+
+            if ($device->wasRecentlyCreated) {
+                self::approveIfSignedIn($device, $user);
+
+                if ($device->isPending()) {
+                    app(AppriseNotifications::class)->sendAfterResponse(
+                        'device.pending_approval',
+                        'Device pending approval',
+                        CheckDeviceNotifications::deviceLabel($device).' is awaiting approval.',
+                        'device:'.$device->rustdesk_id,
+                        $device,
+                    );
+                }
+
+                return $device;
+            }
+        }
+
+        self::approveIfSignedIn($device, $user);
+
+        return $device;
     }
 
     /**

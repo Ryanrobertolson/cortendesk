@@ -12,8 +12,12 @@
             </div>
             <select class="form-select rd-toolbar-filter" wire:model.live="action" aria-label="Action">
                 <option value="">All actions</option>
-                @foreach ($actions as $value => $label)
-                    <option value="{{ $value }}">{{ $label }}</option>
+                @foreach ($actionGroups as $area => $actions)
+                    <optgroup label="{{ $area }}">
+                        @foreach ($actions as $value => $label)
+                            <option value="{{ $value }}">{{ $label }}</option>
+                        @endforeach
+                    </optgroup>
                 @endforeach
             </select>
             <input type="date" class="form-control rd-toolbar-filter" wire:model.live="dateFrom" aria-label="From date">

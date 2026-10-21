@@ -30,15 +30,22 @@ RUN mkdir -p storage/framework/cache/data storage/framework/sessions storage/fra
     && composer dump-autoload --optimize --no-dev
 
 # ---- stage 2: runtime (php-fpm + nginx under supervisord) --------------------
-FROM php:8.4-fpm-alpine
+FROM php:8.5-fpm-alpine
+
+# Refuse a base image older than the last PHP security fix, so a stale cached
+# base fails the build instead of shipping. 8.5.12 fixes CVE-2026-109618 and
+# CVE-2026-109619 (unauthenticated RCE). Raise this with each PHP advisory.
+RUN php -r 'exit(version_compare(PHP_VERSION, "8.5.12", ">=") ? 0 : 1);' \
+    || { echo "PHP $(php -r 'echo PHP_VERSION;') is older than 8.5.12; pull a newer base" >&2; exit 1; }
 
 # ftp is the off-site backup copy in Settings -> Backups; the base image does
 # not ship it. Built standalone it has no TLS unless --with-ftp-ssl is given
 # (issue #100), hence the configure step and openssl-dev at build time.
+# OPcache is built into PHP 8.5, so it is not in this list.
 RUN apk add --no-cache nginx supervisor icu-libs gettext \
     && apk add --no-cache --virtual .build icu-dev openssl-dev \
     && docker-php-ext-configure ftp --with-ftp-ssl \
-    && docker-php-ext-install -j"$(nproc)" pdo_mysql bcmath opcache intl ftp \
+    && docker-php-ext-install -j"$(nproc)" pdo_mysql bcmath intl ftp \
     && apk del .build
 
 WORKDIR /app

@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ClientToken;
 use App\Models\LoginLog;
 use App\Models\OidcAuthRequest;
+use App\Services\DeviceEnrollment;
 use App\Services\OidcException;
 use App\Services\OidcService;
 use Illuminate\Http\JsonResponse;
@@ -181,6 +182,13 @@ class ClientOidcController extends Controller
             'os' => $pending->device_os,
             'name' => $pending->device_name,
             'type' => $pending->client_type,
+        ]);
+
+        // Same as a password sign-in: register or approve the device (#95, #110).
+        DeviceEnrollment::signedIn($user, [
+            'id' => $pending->device_id,
+            'uuid' => $pending->device_uuid,
+            'os' => $pending->device_os,
         ]);
 
         $pending->forceFill([
