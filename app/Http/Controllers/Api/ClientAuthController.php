@@ -8,7 +8,6 @@ use App\Http\Middleware\RequireTwoFactor;
 use App\Mail\LoginVerificationCode;
 use App\Models\AlarmLog;
 use App\Models\ClientToken;
-use App\Models\Device;
 use App\Models\LoginLog;
 use App\Models\User;
 use App\Services\AppriseNotifications;
@@ -270,12 +269,14 @@ class ClientAuthController extends Controller
             'type' => $deviceInfo['type'] ?? null,
         ]);
 
-        // Signing in from a device the approval gate is holding approves it
-        // when the setting says so, and makes this user its owner (issue #95).
-        $pending = Device::query()->pending()->where('rustdesk_id', (string) $request->input('id', ''))->first();
-        if ($pending !== null) {
-            DeviceEnrollment::approveIfSignedIn($pending, $user);
-        }
+        // Registers a device the console has not seen (phones never send
+        // sysinfo, issue #110), and approves a pending one when the setting
+        // says so, making this user its owner (issue #95).
+        DeviceEnrollment::signedIn($user, [
+            'id' => (string) $request->input('id', ''),
+            'uuid' => (string) $request->input('uuid', ''),
+            'os' => $deviceInfo['os'] ?? null,
+        ], $request->ip());
 
         // AuthBody: access_token, type and user are required by the client.
         return response()->json([

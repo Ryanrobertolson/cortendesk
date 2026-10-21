@@ -44,7 +44,7 @@ Built on Laravel + Livewire with precompiled assets: **there is no frontend buil
 
 ## Requirements
 
-- PHP **8.4+** with Composer
+- PHP **8.3+** with Composer (8.5 recommended; use 8.5.12, 8.4.27, 8.3.36 or later, which fix CVE-2026-109618 and CVE-2026-109619)
 - MySQL/MariaDB (SQLite works for evaluation)
 - nginx + php-fpm (or any Laravel-capable web server)
 - A RustDesk server (`hbbs`/`hbbr`) — **included in the Docker image**; only needed separately for a manual install
@@ -60,7 +60,7 @@ docker run -d --name cortendesk \
   -e APP_URL=https://rd.example.com \
   -p 8080:8080 -p 21115-21117:21115-21117 -p 21116:21116/udp \
   -v cortendesk-data:/data \
-  ghcr.io/marcpope/cortendesk:1.14.0
+  ghcr.io/marcpope/cortendesk:1.15.0
 ```
 
 `APP_URL` is the only setting that matters: it is the address your clients and

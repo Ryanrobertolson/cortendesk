@@ -26,9 +26,9 @@ class AppriseNotifications
     public const MODE_URLS = 'urls';
 
     public const EVENTS = [
-        'device.pending_approval' => 'Device pending approval',
         'device.offline' => 'Device offline',
         'device.online' => 'Device recovered',
+        'device.pending_approval' => 'Device pending approval',
         'console.login_failed' => 'Failed console login',
         'security.alarm' => 'Security alarm',
         'remote_connection.failure' => 'Repeated remote connection failure',
@@ -54,6 +54,13 @@ class AppriseNotifications
 
     /** Offline and recovery share a subject; a newer one makes an older one stale. */
     public const PRESENCE_EVENTS = ['device.offline', 'device.online'];
+
+    /**
+     * Events that can be limited to chosen groups or devices. Not pending
+     * approval: that device was created a moment earlier, so no device list
+     * can name it and its group is the default group (issue #109).
+     */
+    public const SCOPED_EVENTS = ['device.offline', 'device.online'];
 
     /** HTTP timeout on request paths, where a slow Apprise must not hold the worker. */
     public const REQUEST_TIMEOUT_SECONDS = 3;
@@ -497,7 +504,9 @@ class AppriseNotifications
     private function allowsDevice(string $event, ?Device $device): bool
     {
         $suffix = $this->settingSuffix($event);
-        if ($device === null || Setting::get('apprise_scope_'.$suffix, 'all') !== 'selected') {
+        if ($device === null
+            || ! in_array($event, self::SCOPED_EVENTS, true)
+            || Setting::get('apprise_scope_'.$suffix, 'all') !== 'selected') {
             return true;
         }
 

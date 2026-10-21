@@ -18,47 +18,109 @@ class ConsoleAuditList extends Component
     protected string $paginationTheme = 'bootstrap';
 
     /**
-     * Known audit actions, grouped for the filter dropdown. Free-text actions
-     * that are not in this map still match via the plain LIKE fallback.
+     * Every action the console records, for the filter dropdown. The part
+     * before the first dot picks the group (AREAS). A test fails when code
+     * records an action that is missing here (issue #108).
      *
      * @var array<string, string>
      */
     public const ACTIONS = [
+        'account.update' => 'Profile updated',
+        'account.password' => 'Password changed',
+        'address-book.create' => 'Address book created',
+        'address-book.update' => 'Address book updated',
+        'address-book.delete' => 'Address book deleted',
+        'address-book.rule-add' => 'Share rule added',
+        'address-book.rule-update' => 'Share rule updated',
+        'address-book.rule-delete' => 'Share rule deleted',
+        'address-book.tag-add' => 'Tag added',
+        'address-book.tag-update' => 'Tag updated',
+        'address-book.tag-delete' => 'Tag deleted',
+        'address-book.peer-add' => 'Entry added',
+        'address-book.peer-update' => 'Entry updated',
+        'address-book.peer-delete' => 'Entry removed',
+        'api-token.create' => 'API token created',
+        'api-token.revoke' => 'API token revoked',
+        'backup.create' => 'Backup created',
+        'backup.download' => 'Backup downloaded',
+        'backup.restore' => 'Backup restored',
+        'backup.delete' => 'Backup deleted',
+        'backup.settings' => 'Backup settings changed',
+        'client_download.create' => 'Download uploaded',
+        'client_download.update' => 'Download updated',
+        'client_download.publish' => 'Download published',
+        'client_download.unpublish' => 'Download unpublished',
+        'client_download.delete' => 'Download deleted',
+        'device.create' => 'Device created',
+        'device.update' => 'Device updated',
+        'device.approve' => 'Device approved',
+        'device.reject' => 'Device rejected',
+        'device.enable' => 'Device enabled',
+        'device.disable' => 'Device disabled',
+        'device.initiate' => 'Session start permission changed',
+        'device.assign' => 'Device assigned',
+        'device.group-move' => 'Devices moved to a group',
+        'device.duplicate-dismiss' => 'Duplicate flag dismissed',
+        'device.export' => 'Devices exported',
+        'device.delete' => 'Device deleted',
+        'device.restore' => 'Device restored',
+        'device.destroy' => 'Device destroyed',
+        'group.create' => 'Group created',
+        'group.update' => 'Group updated',
+        'group.delete' => 'Group deleted',
+        'logs.prune' => 'Logs pruned',
+        'role.create' => 'Role created',
+        'role.update' => 'Role updated',
+        'role.delete' => 'Role deleted',
+        'session.disconnect' => 'Session disconnected',
+        'settings.update' => 'Settings updated',
+        'settings.server-access' => 'Server access changed',
+        'settings.server-ip-match' => 'Server IP matching changed',
+        'settings.mail-test' => 'Test email sent',
+        'settings.notification-test' => 'Test notification sent',
+        'settings.presence-snooze' => 'Presence alerts snoozed',
+        'settings.presence-snooze-clear' => 'Presence snooze cleared',
+        'setup.complete' => 'Setup completed',
+        'setup.dismiss' => 'Setup guide dismissed',
+        'strategy.create' => 'Strategy created',
+        'strategy.update' => 'Strategy updated',
+        'strategy.toggle' => 'Strategy enabled/disabled',
+        'strategy.rollback' => 'Strategy rolled back',
+        'strategy.assign' => 'Strategy assigned',
+        'strategy.delete' => 'Strategy deleted',
         'user.create' => 'User created',
         'user.update' => 'User updated',
         'user.enable' => 'User enabled',
         'user.disable' => 'User disabled',
         'user.force-logout' => 'User force-logout',
+        'user.assign-devices' => 'Devices assigned to user',
+        'user.invite' => 'Invitation sent',
+        'user.invite-resend' => 'Invitation resent',
+        'user.invite-revoke' => 'Invitation revoked',
+        'user.invite-accept' => 'Invitation accepted',
+        'user.2fa-enable' => 'Two-factor enabled',
+        'user.2fa-disable' => 'Two-factor disabled',
+        'user.2fa-recovery-regenerate' => 'Recovery codes regenerated',
+        'user.2fa-reset' => 'Two-factor reset',
         'user.delete' => 'User deleted',
-        'device.create' => 'Device created',
-        'device.update' => 'Device updated',
-        'device.delete' => 'Device deleted',
-        'device.restore' => 'Device restored',
-        'device.destroy' => 'Device destroyed',
-        'device.duplicate-dismiss' => 'Duplicate flag dismissed',
-        'group.create' => 'Group created',
-        'group.update' => 'Group updated',
-        'group.delete' => 'Group deleted',
-        'address-book.create' => 'Address book created',
-        'address-book.delete' => 'Address book deleted',
-        'address-book.rule-add' => 'Address book rule added',
-        'address-book.rule-update' => 'Address book rule updated',
-        'address-book.rule-delete' => 'Address book rule deleted',
-        'address-book.update' => 'Address book updated',
-        'address-book.tag-add' => 'Address book tag added',
-        'address-book.tag-delete' => 'Address book tag deleted',
-        'address-book.peer-add' => 'Address book entry added',
-        'address-book.peer-update' => 'Address book entry updated',
-        'address-book.peer-delete' => 'Address book entry removed',
-        'strategy.create' => 'Strategy created',
-        'strategy.update' => 'Strategy updated',
-        'strategy.toggle' => 'Strategy enabled/disabled',
-        'strategy.delete' => 'Strategy deleted',
-        'strategy.assign' => 'Strategy assigned',
-        'settings.update' => 'Settings updated',
-        'settings.server-access' => 'Server access changed',
-        'settings.server-ip-match' => 'Server IP matching changed',
-        'logs.prune' => 'Logs pruned',
+    ];
+
+    /** Dropdown group per action prefix, in display order. */
+    public const AREAS = [
+        'user' => 'Users',
+        'account' => 'Own account',
+        'device' => 'Devices',
+        'group' => 'Groups',
+        'role' => 'Roles',
+        'address-book' => 'Address books',
+        'strategy' => 'Strategies',
+        'session' => 'Sessions',
+        'backup' => 'Backups',
+        'client_download' => 'Client downloads',
+        'api-token' => 'API tokens',
+        'settings' => 'Settings',
+        'setup' => 'Setup',
+        'logs' => 'Logs',
     ];
 
     #[Url(except: '')]
@@ -127,7 +189,12 @@ class ConsoleAuditList extends Component
                         ->orWhere('summary', 'like', $s);
                 });
             })
-            ->when($this->action !== '', fn (Builder $q) => $q->where('action', 'like', '%'.$this->action.'%'))
+            // A known action matches exactly: 'user.invite' must not also
+            // pull in invite-resend and invite-revoke. Anything else typed
+            // into the URL is a substring search.
+            ->when($this->action !== '', fn (Builder $q) => array_key_exists($this->action, self::ACTIONS)
+                ? $q->where('action', $this->action)
+                : $q->where('action', 'like', '%'.$this->action.'%'))
             ->when($this->dateFrom !== '', fn (Builder $q) => $q->whereDate('created_at', '>=', $this->dateFrom))
             ->when($this->dateTo !== '', fn (Builder $q) => $q->whereDate('created_at', '<=', $this->dateTo))
             ->orderByDesc('created_at')
@@ -156,11 +223,23 @@ class ConsoleAuditList extends Component
         }, 'console-audit.csv');
     }
 
+    /** @return array<string, array<string, string>> group label => [action => label] */
+    public static function groupedActions(): array
+    {
+        $groups = array_fill_keys(array_values(self::AREAS), []);
+        foreach (self::ACTIONS as $action => $label) {
+            $area = self::AREAS[strstr($action, '.', true)] ?? 'Other';
+            $groups[$area][$action] = $label;
+        }
+
+        return array_filter($groups);
+    }
+
     public function render()
     {
         return view('livewire.console-audit-list', [
             'audits' => $this->query()->paginate($this->perPage),
-            'actions' => self::ACTIONS,
+            'actionGroups' => self::groupedActions(),
         ]);
     }
 }

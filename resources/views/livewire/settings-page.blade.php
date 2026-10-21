@@ -698,7 +698,7 @@
                                                 <input class="form-check-input" type="checkbox" id="event-{{ str_replace('.', '-', $event) }}" wire:model="appriseEvents.{{ $eventKey }}">
                                                 <label class="form-check-label" for="event-{{ str_replace('.', '-', $event) }}">{{ $label }}</label>
                                             </div>
-                                            @if (str_starts_with($event, 'device.'))
+                                            @if (in_array($event, \App\Services\AppriseNotifications::SCOPED_EVENTS, true))
                                                 <select class="form-select form-select-sm mt-2" wire:model.live="appriseScopes.{{ $eventKey }}">
                                                     <option value="all">All approved devices</option>
                                                     <option value="selected">Selected groups or devices</option>
